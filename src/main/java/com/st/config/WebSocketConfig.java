@@ -30,14 +30,14 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void configureMessageBroker(MessageBrokerRegistry registry) {
         // "STOMP broker relay"处理所有消息将消息发送到外部的消息代理
         registry.enableStompBrokerRelay("/exchange","/topic","/queue","/amq/queue")
-                //.setVirtualHost("JCChost") //对应自己rabbitmq里的虚拟host
+                .setVirtualHost("/") //对应自己rabbitmq里的虚拟host
                 .setRelayHost("127.0.0.1")
-                .setClientLogin("guest")
-                .setClientPasscode("guest")
-                .setSystemLogin("guest")
-                .setSystemPasscode("guest")
-                .setSystemHeartbeatSendInterval(1000)
-                .setSystemHeartbeatReceiveInterval(1000);
+                .setRelayPort(61613)
+                .setClientLogin("admin")
+                .setClientPasscode("admin")
+                .setSystemLogin("admin")
+                .setSystemPasscode("admin")
+                .setSystemHeartbeatSendInterval(100);
 
         WebSocketMessageBrokerConfigurer.super.configureMessageBroker(registry);
     }

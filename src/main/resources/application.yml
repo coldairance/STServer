@@ -27,7 +27,7 @@ mybatis-plus:
 spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://127.0.0.1/st?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
+    url: jdbc:mysql://101.42.164.61/st?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
     username: root
     password: 123456
     hikari:
@@ -39,7 +39,7 @@ spring:
       connection-test-query: select 1
       minimum-idle: 50
   redis:
-    host: 127.0.0.1
+    host: 101.42.164.61
     port: 6379
     lettuce:
       pool:
@@ -52,10 +52,11 @@ spring:
   transaction:
     rollback-on-commit-failure: true
   rabbitmq:
-    host: 127.0.0.1
+    host: 101.42.164.61
+    virtual-host: /
     port: 5672
-    username: guest
-    password: guest
+    username: admin
+    password: admin
     listener:
       simple:
         concurrency: 50
