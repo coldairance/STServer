@@ -1,11 +1,9 @@
-package com.st.result;
+package com.st.utils;
 
 public enum ResultCode {
 
-    /* 默认成功 */
     SUCCESS(200, "成功"),
-
-    /* 错误 */
+    ERROR(500,"失败"),
     ORDER_REPETITION(501, "订单重复"),
     ORDER_EXPIRED(502,"订单过期"),
     PAY_REPETITION(503,"重复购买"),

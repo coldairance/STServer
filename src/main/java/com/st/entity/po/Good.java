@@ -1,5 +1,6 @@
 package com.st.entity.po;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -17,4 +18,7 @@ public class Good implements Serializable {
     private String name;
     private String price;
     private Integer number;
+    private String description;
+    private String cut;
+    private String full;
 }

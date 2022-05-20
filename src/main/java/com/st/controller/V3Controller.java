@@ -4,13 +4,13 @@ import cn.hutool.core.util.IdUtil;
 import cn.hutool.http.server.HttpServerRequest;
 import cn.hutool.json.JSONUtil;
 import com.st.component.redis.RedisLimiter;
+import com.st.component.rmq.RMQSender;
 import com.st.component.socket.SocketSender;
 import com.st.dao.OrderMapper;
 import com.st.dao.ReceiptMapper;
 import com.st.entity.po.Good;
 import com.st.entity.po.Order;
 import com.st.entity.po.Receipt;
-import com.st.component.rmq.RMQSender;
 import com.st.component.redis.RedisUtil;
 import com.st.entity.to.Message;
 import com.st.utils.Result;
@@ -23,8 +23,8 @@ import java.math.BigDecimal;
 
 
 @RestController
-@RequestMapping("/v1")
-public class V1Controller {
+@RequestMapping("/v3")
+public class V3Controller {
 
     @Autowired
     private OrderMapper orderMapper;
@@ -33,18 +33,23 @@ public class V1Controller {
 
     @Autowired
     private RedisLimiter redisLimiter;
-    @Autowired
-    private RMQSender rmqSender;
+
     @Autowired
     private SocketSender socketSender;
+
     @Autowired
     private RedisUtil redisUtil;
+
+    @Autowired
+    private RMQSender rmqSender;
 
     @Value("${myself.expired}")
     private Integer expired;
 
     @Value("${myself.limit.user.time}")
     private Integer limitTime;
+
+
     /**
      * data {
      *     uid,
@@ -55,7 +60,7 @@ public class V1Controller {
      * @param response
      * @param data
      */
-    @PostMapping("/order")
+    @PostMapping("order")
     public Result addOrder(
             HttpServerRequest request,
             HttpServletResponse response,
@@ -73,13 +78,21 @@ public class V1Controller {
         Object pay = redisUtil.get("PAY-" + order.getUid() + "-" + order.getGid());
         if(pay!=null) return new Result(ResultCode.PAY_REPETITION);
 
-        // 查看库存
-        Integer cnt = (Integer) redisUtil.get("GC-" + order.getGid());
-        if(cnt<order.getNumber()) return new Result(ResultCode.GOOD_EMPTY);
         order.setUuid(IdUtil.simpleUUID());
+        // 预减操作（需要同步解决多卖问题）
+        synchronized (this){
+            // 检查库存
+            Integer cnt = (Integer) redisUtil.get("GC-" + order.getGid());
+            if(cnt<order.getNumber()){
+                return new Result(ResultCode.GOOD_EMPTY);
+            }
+            redisUtil.decr("GC-" + order.getGid(),order.getNumber());
+        }
+
         redisUtil.set("GO-"+order.getUid()+"-"+order.getGid(),order);
-        // 订单失效时间，3s
         redisUtil.expire("GO-"+order.getUid()+"-"+order.getGid(),expired);
+        // 发送订单到过期队列
+        rmqSender.sendExpiredOrder(order);
         return new Result(ResultCode.SUCCESS, order.getUuid());
     }
 
@@ -92,7 +105,7 @@ public class V1Controller {
      * @param response
      * @param data
      */
-    @PostMapping("/pay")
+    @PostMapping("pay")
     public Result addReceiptMapper(
             HttpServerRequest request,
             HttpServletResponse response,
@@ -105,27 +118,23 @@ public class V1Controller {
             return new Result(ResultCode.ORDER_EXPIRED);
         order = cur;
 
-        // 尝试获取商品
         synchronized (this){
             // 购买重复校验
             Object pay = redisUtil.get("PAY-" + order.getUid() + "-" + order.getGid());
             if(pay != null) return new Result(ResultCode.PAY_REPETITION);
-            // 库存校验
-            Integer cnt = (Integer) redisUtil.get("GC-" + order.getGid());
-            if(cnt<order.getNumber()){
-                return new Result(ResultCode.GOOD_EMPTY);
-            }
-
-            redisUtil.decr("GC-" + order.getGid(),order.getNumber());
             // 持久化订单
-            redisUtil.set("PAY-"+order.getUid()+"-"+order.getGid(),order);
+            redisUtil.set("PAY-" + order.getUid() + "-" + order.getGid(),order);
         }
-        // 发送抢购成功消息
-        socketSender.sendPublic(new Message(order.getUid(),1,null));
+        // 删减库存
+        redisUtil.decr("GC-"+order.getGid(),order.getNumber());
+
         redisUtil.zIncrement("rank",order.getGid(),order.getNumber());
         // 发送排名消息
         socketSender.sendPublic(new Message(0,0,redisUtil.zRange("rank",0,-1)));
+        // 发送抢购成功消息
+        socketSender.sendPublic(new Message(order.getUid(),1,null));
 
+        // 获取折扣
         if(Math.random()>0.7){
             Integer discounts = (Integer) redisUtil.get("GD-" + order.getGid());
             if(discounts>0){
@@ -149,6 +158,7 @@ public class V1Controller {
         BigDecimal number = new BigDecimal(order.getNumber());
         BigDecimal discount = new BigDecimal(order.getDiscount());
         receipt.setMoney(price.multiply(number).multiply(discount).toString());
+
         // 异步同步数据库
         rmqSender.sendDBOrder(order,receipt);
         return new Result(ResultCode.SUCCESS);

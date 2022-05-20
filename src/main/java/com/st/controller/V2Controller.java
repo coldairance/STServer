@@ -1,17 +1,22 @@
 package com.st.controller;
 
+import cn.hutool.core.util.IdUtil;
 import cn.hutool.http.server.HttpServerRequest;
 import cn.hutool.json.JSONUtil;
+import com.st.component.redis.RedisLimiter;
 import com.st.component.rmq.RMQSender;
+import com.st.component.socket.SocketSender;
 import com.st.dao.OrderMapper;
 import com.st.dao.ReceiptMapper;
 import com.st.entity.po.Good;
 import com.st.entity.po.Order;
 import com.st.entity.po.Receipt;
 import com.st.component.redis.RedisUtil;
-import com.st.result.Result;
-import com.st.result.ResultCode;
+import com.st.entity.to.Message;
+import com.st.utils.Result;
+import com.st.utils.ResultCode;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 import javax.servlet.http.HttpServletResponse;
 import java.math.BigDecimal;
@@ -27,7 +32,19 @@ public class V2Controller {
     private ReceiptMapper receiptMapper;
 
     @Autowired
+    private RedisLimiter redisLimiter;
+
+    @Autowired
+    private SocketSender socketSender;
+
+    @Autowired
     private RedisUtil redisUtil;
+
+    @Value("${myself.expired}")
+    private Integer expired;
+
+    @Value("${myself.limit.user.time}")
+    private Integer limitTime;
 
     @Autowired
     private RMQSender rmqSender;
@@ -48,28 +65,30 @@ public class V2Controller {
             HttpServletResponse response,
             @RequestBody String data
     ){
-        if(Math.random()>0.8) return new Result(ResultCode.SERVER_BUSY);
         Order order = JSONUtil.toBean(data, Order.class);
         order.setDiscount("1.0");
+        if(!redisLimiter.limit(""+order.getUid(),limitTime,1)){
+            return new Result(ResultCode.SERVER_BUSY);
+        }
 
         // 购买不可重复校验
-        Object o = redisUtil.get("GO-"+order.getUid()+"-"+order.getGid());
-        if(o != null) return new Result(ResultCode.ORDER_REPETITION);
-
+        long expire = redisUtil.getExpire("GO-" + order.getUid() + "-" + order.getGid());
+        if(expire==-1) return new Result(ResultCode.PAY_REPETITION);
+        if(expire>0) return new Result(ResultCode.ORDER_REPETITION);
+        order.setUuid(IdUtil.simpleUUID());
         // 检查库存
         Integer cnt = (Integer) redisUtil.get("GC-" + order.getGid());
         if(cnt<order.getNumber()){
             return new Result(ResultCode.GOOD_EMPTY);
         }
-
         // 预减操作（存在并发多减问题）
         redisUtil.decr("GC-" + order.getGid(),order.getNumber());
 
         redisUtil.set("GO-"+order.getUid()+"-"+order.getGid(),order);
-        redisUtil.expire("GO-"+order.getUid()+"-"+order.getGid(),3);
+        redisUtil.expire("GO-"+order.getUid()+"-"+order.getGid(),expire);
         // 发送订单到过期队列
         rmqSender.sendExpiredOrder(order);
-        return new Result(ResultCode.SUCCESS);
+        return new Result(ResultCode.SUCCESS, order.getUuid());
     }
 
     /**
@@ -90,27 +109,31 @@ public class V2Controller {
         Order order = JSONUtil.toBean(data, Order.class);
 
         // 订单失效校验
-        order = (Order) redisUtil.get("GO-"+order.getUid()+"-"+order.getGid());
-        if(order==null) return new Result(ResultCode.ORDER_EXPIRED);
+        Order cur = (Order) redisUtil.get("GO-" + order.getUid() + "-" + order.getGid());
+        if(cur==null || !cur.getUuid().equals(order.getUuid()))
+            return new Result(ResultCode.ORDER_EXPIRED);
+        order = cur;
 
-        // 检查库存（多减情况）
-        Integer cnt = (Integer) redisUtil.get("GC-" + order.getGid());
-        if(cnt<order.getNumber()){
-            return new Result(ResultCode.GOOD_EMPTY);
-        }
-
-        // 锁住操作redis的唯一实例
-        synchronized (redisUtil){
-            // 双重校验
-            order = (Order) redisUtil.get("GO-"+order.getUid()+"-"+order.getGid());
-            if(order==null) return new Result(ResultCode.ORDER_EXPIRED);
-            cnt = (Integer) redisUtil.get("GC-" + order.getGid());
+        // 锁住redisUtil
+        synchronized (this){
+            // 购买重复校验
+            Object pay = redisUtil.get("PAY-" + order.getUid() + "-" + order.getGid());
+            if(pay != null) return new Result(ResultCode.PAY_REPETITION);
+            // 库存校验
+            Integer cnt = (Integer) redisUtil.get("GC-" + order.getGid());
             if(cnt<order.getNumber()){
                 return new Result(ResultCode.GOOD_EMPTY);
             }
-            // 将订单置为秒杀时间段内存在（防范重复购买）
-            redisUtil.set("GO-"+order.getUid()+"-"+order.getGid(),order);
+            // 删减库存
+            redisUtil.decr("GC-"+order.getGid(),order.getNumber());
+            // 持久化订单
+            redisUtil.set("PAY-" + order.getUid() + "-" + order.getGid(),order);
         }
+        redisUtil.zIncrement("rank",order.getGid(),order.getNumber());
+        // 发送排名消息
+        socketSender.sendPublic(new Message(0,0,redisUtil.zRange("rank",0,-1)));
+        // 发送抢购成功消息
+        socketSender.sendPublic(new Message(order.getUid(),1,null));
 
         // 获取折扣
         if(Math.random()>0.7){
@@ -121,6 +144,8 @@ public class V2Controller {
                     if(discounts>0){
                         order.setDiscount("0.85");
                         redisUtil.decr("GD-" + order.getGid(),1);
+                        // 发送获得优惠券成功消息
+                        socketSender.sendPublic(new Message(order.getUid(),2,null));
                     }
                 }
             }

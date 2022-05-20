@@ -1,23 +1,16 @@
-# tomcat
 server:
   port: 8081
   servlet:
     context-path: /
-  # tomcat
   tomcat:
     threads:
       max: 200
       min-spare: 50
     connection-timeout: 5000ms
-    # 缓存队列
     accept-count: 100
-    # 最大连接数
     max-connections: 8192
-
-# mybatis-plus
 mybatis-plus:
   mapper-locations: classpath*:/mapper/*.xml
-  # 实体扫描
   type-aliases-package: com.st.entity
   global-config:
     db-config:
@@ -25,23 +18,16 @@ mybatis-plus:
       logic-delete-field: 0
       logic-not-delete-value: 1
     banner: false
-  # 执行器
   executor-type: simple
   configuration:
-    # 一级缓存开启（微服务需关闭）
     local-cache-scope: session
-    # 关闭二级缓存
     cache-enabled: false
-    # 空字段自动赋值
     call-setters-on-nulls: true
     jdbc-type-for-null: null
-
-
 spring:
-  # MySQL数据库配置
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost/st?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
+    url: jdbc:mysql://127.0.0.1/st?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
     username: root
     password: 123456
     hikari:
@@ -51,47 +37,49 @@ spring:
       max-lifetime: 1800000
       connection-timeout: 30000
       connection-test-query: select 1
-  # Redis 数据库配置
+      minimum-idle: 50
   redis:
     host: 127.0.0.1
     port: 6379
     lettuce:
       pool:
         max-active: 5000
-        # 最大空闲
         max-idle: 5000
         min-idle: 2000
         max-wait: 5000ms
     connect-timeout: 5000ms
-  # 事务
+    password: 123456
   transaction:
     rollback-on-commit-failure: true
-
-  # RabbitMQ
   rabbitmq:
     host: 127.0.0.1
     port: 5672
     username: guest
     password: guest
-    # 监听器
     listener:
       simple:
-        concurrency: 5
-        max-concurrency: 10
-        # 一次处理一条消息
+        concurrency: 50
+        max-concurrency: 100
         prefetch: 1
-        # 手工（代码中实现）返回确认ACK
         acknowledge-mode: manual
-        # 重试
         retry:
           enabled: true
           max-attempts: 3
-          max-interval: 1000ms
-
-    # 队列持久化
-    # 确认类型
+          max-interval: 10000ms
     publisher-confirm-type: correlated
-    # 使用监听器对不可达消息做后续处理
     publisher-returns: true
     template:
       mandatory: true
+management:
+  endpoints:
+    web:
+      exposure:
+        include: 'health,metrics'
+myself:
+  limit:
+    user:
+      time: 3
+    entrance:
+      time: 100
+  expired: 10
+  jvmstart: /home/start.sh

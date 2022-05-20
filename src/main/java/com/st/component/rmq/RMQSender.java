@@ -1,6 +1,5 @@
 package com.st.component.rmq;
 
-
 import com.st.entity.po.Order;
 import com.st.entity.po.Receipt;
 import com.st.entity.to.Store;
@@ -19,30 +18,12 @@ public class RMQSender {
     @Autowired
     private RabbitTemplate rabbitTemplate;
 
-    @Autowired
-    private ConfirmCallbackService confirmCallbackService;
-
-    @Autowired
-    private ReturnCallbackService returnCallbackService;
-
     /**
      * 发送需要数据库存储的数据
      * @param order
      * @param receipt
      */
     public void sendDBOrder(Order order, Receipt receipt){
-
-
-        /**
-         * 消费者确认收到消息后，手动ack回执回调处理
-         */
-        rabbitTemplate.setConfirmCallback(confirmCallbackService);
-
-        /**
-         * 消息投递到队列失败回调处理
-         */
-        rabbitTemplate.setReturnsCallback(returnCallbackService);
-
         rabbitTemplate.convertAndSend("directExchange","db_order",new Store(order,receipt),message -> {
                     message.getMessageProperties().setDeliveryMode(MessageDeliveryMode.PERSISTENT);
                     return message;
@@ -58,16 +39,6 @@ public class RMQSender {
     public void sendExpiredOrder(Order order){
 
 
-        /**
-         * 消费者确认收到消息后，手动ack回执回调处理
-         */
-        rabbitTemplate.setConfirmCallback(confirmCallbackService);
-
-        /**
-         * 消息投递到队列失败回调处理
-         */
-        rabbitTemplate.setReturnsCallback(returnCallbackService);
-
         rabbitTemplate.convertAndSend("directExchange","expired_order",order,message -> {
                     message.getMessageProperties().setDeliveryMode(MessageDeliveryMode.PERSISTENT);
                     return message;
@@ -75,5 +46,4 @@ public class RMQSender {
                 new CorrelationData(UUID.randomUUID().toString())
         );
     }
-
 }

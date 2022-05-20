@@ -1,4 +1,4 @@
-package com.st.result;
+package com.st.utils;
 
 import lombok.Data;
 
@@ -13,5 +13,10 @@ public class Result {
     public Result(ResultCode orderRepetition) {
         this.code = orderRepetition.getCode();
         this.message = orderRepetition.getMessage();
+    }
+
+    public Result(ResultCode resultCode, String message){
+        this.code = resultCode.getCode();
+        this.message = message;
     }
 }

@@ -411,8 +411,24 @@ public class RedisUtil {
      * 元素自增
      * @param o
      */
-    public void increment(String key, Object o){
-        redisTemplate.opsForZSet().incrementScore(key,o,1);
+    public void zIncrement(String key, Object o, Integer add){
+        redisTemplate.opsForZSet().incrementScore(key,o,add);
+    }
+
+    /**
+     * 获取排名
+     *
+     * @return
+     */
+    public Set<Object> zRange(String key, Integer begin, Integer end){
+        return redisTemplate.opsForZSet().range(key,begin,end);
+    }
+
+    /**
+     * 获取得分
+     */
+    public Double zScore(String key, Object member){
+        return redisTemplate.opsForZSet().score(key,member);
     }
 
     //===============================list=================================

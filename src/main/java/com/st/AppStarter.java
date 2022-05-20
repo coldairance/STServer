@@ -1,10 +1,8 @@
 package com.st;
-
-import org.springframework.amqp.rabbit.annotation.EnableRabbit;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 
-@EnableRabbit // 开启注解RabbitMQ
 @SpringBootApplication
 public class AppStarter {
     public static void main(String[] args) {
