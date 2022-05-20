@@ -51,11 +51,6 @@ public class MyTest {
     private ActuatorUtil actuatorUtil;
 
     @Test
-    public void test() throws Exception {
-
-    }
-
-    @Test
     public void consistent(){
         BigDecimal[] prices = new BigDecimal[7];
         prices[1] = new BigDecimal("19.99");
@@ -93,10 +88,8 @@ public class MyTest {
             System.out.println("商品名："+g.getName());
             System.out.println("预定库存：" + g.getNumber() + " 实际售出：" + setout[g.getGid()] + " 缓存剩余：" + redisUtil.get("GC-" + g.getGid()));
             System.out.println("预订优惠券："+ g.getNumber()/10+" 实际获取："+discount[g.getGid()]+" 缓存剩余："+ redisUtil.get("GD-"+g.getGid()));
-            System.out.println("应急库存："+g.getHide());
             error |= !g.getNumber().equals(setout[g.getGid()] + (Integer) redisUtil.get("GC-" + g.getGid()));
             error |= !((g.getNumber()/10)==(discount[g.getGid()]+(Integer)redisUtil.get("GD-"+g.getGid())));
-            error |= (((Integer) redisUtil.get("GC-" + g.getGid()) + g.getHide()) < 0);
         }
         System.out.println("订单计算总金额："+sum1);
         System.out.println("收据计算总金额："+sum2);
