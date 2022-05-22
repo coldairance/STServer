@@ -19,6 +19,7 @@ public class fluxInterceptor implements HandlerInterceptor {
     private Integer limitTime;
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+
         if(redisLimiter.limit("entrance", limitTime, 1)){
             return HandlerInterceptor.super.preHandle(request, response, handler);
         }

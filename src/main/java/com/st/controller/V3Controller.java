@@ -65,7 +65,7 @@ public class V3Controller {
             HttpServerRequest request,
             HttpServletResponse response,
             @RequestBody String data
-    ){
+    ) throws InterruptedException {
         Order order = JSONUtil.toBean(data, Order.class);
         order.setDiscount("1.0");
         if(!redisLimiter.limit(""+order.getUid(),limitTime,1)){
@@ -81,6 +81,7 @@ public class V3Controller {
         order.setUuid(IdUtil.simpleUUID());
         // 预减操作（需要同步解决多卖问题）
         synchronized (this){
+            Thread.sleep(1000);
             // 检查库存
             Integer cnt = (Integer) redisUtil.get("GC-" + order.getGid());
             if(cnt<order.getNumber()){

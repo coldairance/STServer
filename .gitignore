@@ -1,8 +1,6 @@
 .idea/
 target/
-test/assets.txt
 test/jmeter.log
-attach/data.txt
 pom.xml.tag
 pom.xml.releaseBackup
 pom.xml.versionsBackup

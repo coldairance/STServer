@@ -1,7 +1,7 @@
 import random
 
 orders = []
-N = 15000
+N = 150000
 # 生成 order 订单
 for i in range(1, N+1):
     uid = i
@@ -25,6 +25,6 @@ for i in range(1, N+1):
             s = f'{uid},{gid},{number}'
             orders.append(s)
 # 写入文件
-file = open(f'./data.txt', 'w')
+file = open(f'./stable.txt', 'w')
 for o in orders:
     file.write(o+'\n')
