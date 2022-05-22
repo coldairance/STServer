@@ -83,4 +83,4 @@ myself:
     entrance:
       time: 100
   expired: 10
-  jvmstart: /home/coldairance/desktop/STServer/start.sh
+  jvmstart: /home/start.sh
