@@ -1,0 +1,18 @@
+server:
+  port: 9090
+dubbo:
+  application:
+    name: gateway
+  consumer:
+    check: false
+  protocol:
+    name: dubbo
+    port: -1
+  registry:
+    id: zk-registry
+    address: zookeeper://101.42.164.61:2181
+  config-center:
+    address: zookeeper://101.42.164.61:2181
+  metadata-report:
+    address: zookeeper://101.42.164.61:2181
+

@@ -1,0 +1,47 @@
+dubbo:
+  provider:
+    connections: 100
+  consumer:
+    check: false
+    filter: metrics
+  application:
+    name: mysql
+  protocol:
+    name: dubbo
+    port: -1
+  registry:
+    id: zk-registry
+    address: zookeeper://101.42.164.61:2181
+  config-center:
+    address: zookeeper://101.42.164.61:2181
+  metadata-report:
+    address: zookeeper://101.42.164.61:2181
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/*.xml
+  type-aliases-package: com.st.entity
+  global-config:
+    db-config:
+      logic-delete-field: 0
+      logic-not-delete-value: 1
+    banner: false
+  executor-type: simple
+  configuration:
+    local-cache-scope: session
+    cache-enabled: false
+    call-setters-on-nulls: true
+    jdbc-type-for-null: null
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1/st?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
+    username: root
+    password: 123456
+    hikari:
+      maximum-pool-size: 100
+      auto-commit: true
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      connection-timeout: 30000
+      connection-test-query: select 1
+      minimum-idle: 50
+

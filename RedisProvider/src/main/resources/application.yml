@@ -1,0 +1,39 @@
+dubbo:
+  application:
+    name: redis
+  provider:
+    connections: 100
+  consumer:
+    check: false
+    filter: metrics
+  protocol:
+    name: dubbo
+    port: -1
+  registry:
+    id: zk-registry
+    address: zookeeper://101.42.164.61:2181
+  config-center:
+    address: zookeeper://101.42.164.61:2181
+  metadata-report:
+    address: zookeeper://101.42.164.61:2181
+spring:
+  redis:
+    host: 127.0.0.1
+    port: 6379
+    lettuce:
+      pool:
+        max-active: 5000
+        max-idle: 5000
+        min-idle: 2000
+        max-wait: 5000ms
+    connect-timeout: 5000ms
+myself:
+  expired: 10
+  ## Redisson 分布式锁配置
+  redisson:
+    address: redis://127.0.0.1:6379
+    database: 1
+    connectionMinimumIdleSize: 24
+    connectionPoolSize: 64
+    connectionTimeout: 10000
+    timeout: 3000

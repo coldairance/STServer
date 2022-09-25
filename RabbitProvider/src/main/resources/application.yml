@@ -1,0 +1,42 @@
+dubbo:
+  application:
+    name: rabbitmq
+  provider:
+    connections: 100
+  consumer:
+    check: false
+    filter: metrics
+  protocol:
+    name: dubbo
+    port: -1
+  registry:
+    id: zk-registry
+    address: zookeeper://101.42.164.61:2181
+  config-center:
+    address: zookeeper://101.42.164.61:2181
+  metadata-report:
+    address: zookeeper://101.42.164.61:2181
+spring:
+  rabbitmq:
+    host: 127.0.0.1
+    virtual-host: /
+    port: 5672
+    username: admin
+    password: admin
+    listener:
+      simple:
+        concurrency: 10
+        max-concurrency: 20
+        prefetch: 3
+        acknowledge-mode: manual
+        retry:
+          enabled: false
+          max-attempts: 3
+          max-interval: 10000ms
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    template:
+      mandatory: true
+
+myself:
+  expired: 10
